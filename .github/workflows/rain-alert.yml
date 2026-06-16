@@ -1,6 +1,8 @@
 name: Singapore Rain Alert
 
 on:
+  push:
+    branches: [master]
   schedule:
     # Every 30 minutes (offset to avoid exact :00/:30)
     - cron: '3,33 * * * *'
