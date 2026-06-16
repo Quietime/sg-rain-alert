@@ -1,0 +1,25 @@
+name: Singapore Rain Alert
+
+on:
+  schedule:
+    # Every 30 minutes (offset to avoid exact :00/:30)
+    - cron: '3,33 * * * *'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  check-rain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check weather and send alert if rain
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        run: python rain_alert.py
