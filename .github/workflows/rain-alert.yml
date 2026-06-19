@@ -4,9 +4,8 @@ on:
   push:
     branches: [master]
   schedule:
-    # Every 30 minutes (offset to avoid exact :00/:30)
-    - cron: '3,33 * * * *'
-  workflow_dispatch: # Allow manual trigger for testing
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   check-rain:
@@ -17,6 +16,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Restore rain state cache
+        uses: actions/cache@v4
+        with:
+          path: rain_state.json
+          key: rain-state-${{ github.run_id }}
+          restore-keys: rain-state-
 
       - name: Check weather and send alert if rain
         env:
