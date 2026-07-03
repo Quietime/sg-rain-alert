@@ -11,9 +11,9 @@ from datetime import datetime, timezone, timedelta
 FORECAST_URL = "https://api.data.gov.sg/v1/environment/2-hour-weather-forecast"
 RAINFALL_URL = "https://api.data.gov.sg/v1/environment/rainfall"
 
-FORECAST_AREAS = {"Novena": "Orchid Apt 42B", "City": "Marina Square"}
+FORECAST_AREAS = {"Bukit Timah": "Orchid Apt 42B", "City": "Marina Square"}
 RAINFALL_STATIONS = {
-    "S111": {"name": "Scotts Road", "location": "Orchid Apt 42B"},
+    "S905": {"name": "S905 (Sixth Ave)", "location": "Orchid Apt 42B"},
     "S108": {"name": "Marina Gardens Drive", "location": "Marina Square"},
 }
 RAIN_KEYWORDS = ["rain", "showers", "thundery", "thunder", "drizzle", "storm"]
