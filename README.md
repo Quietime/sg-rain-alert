@@ -1,41 +1,40 @@
-# 🌧️ Singapore Rain Alert
+# Singapore Rain Alert
 
-Automated rain alert for Singapore. Checks the 2-hour weather forecast every 30 minutes and sends an email notification when rain is expected.
+Cloud-based rain alerts for two Singapore locations. GitHub Actions checks every five minutes and sends an email only when rain is detected or forecast.
 
-## Monitored Locations
-- **Emery Point** (API area: Kallang)
-- **Marina Square** (API area: City)
+## Monitored locations
 
-## Setup
+| User location | NEA forecast area | Nearby rainfall station |
+|---|---|---|
+| Orchid Apt 42B / Sixth Avenue MRT (DT7) | Bukit Timah | S905 |
+| Marina Square | City | S108 Marina Gardens Drive |
 
-### 1. Create GitHub Repository
-Push this project to a new GitHub repository.
+## Alert logic
 
-### 2. Configure Secrets
-Go to **Settings → Secrets and variables → Actions** and add:
+- Checks the NEA five-minute rainfall readings and two-hour forecast.
+- Sends an email if either selected rainfall station reports more than `0 mm`, or either forecast area contains a rain-related condition.
+- Uses a 30-minute cooldown to avoid repeated emails during the same rain event.
+- Retries temporary weather API failures up to three times.
+- Runs entirely in GitHub Actions; the user's computer does not need to stay on.
 
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `SMTP_SERVER` | SMTP server address | `smtp.gmail.com` |
-| `SMTP_PORT` | SMTP port | `465` |
-| `SMTP_USER` | Sender email address | `your@gmail.com` |
-| `SMTP_PASS` | SMTP password / app password | `xxxx xxxx xxxx xxxx` |
+## GitHub configuration
 
-#### SMTP Provider Options
+Add these repository secrets under **Settings -> Secrets and variables -> Actions**:
 
-**Gmail (Recommended)**
-- Server: `smtp.gmail.com`, Port: `465`
-- Need to generate an [App Password](https://myaccount.google.com/apppasswords)
+| Secret | Description |
+|---|---|
+| `SMTP_SERVER` | SMTP server hostname, such as `smtp.qq.com` |
+| `SMTP_PORT` | SMTP port, normally `465` for SSL |
+| `SMTP_USER` | Sender email address |
+| `SMTP_PASS` | SMTP authorization code or app password |
 
-**QQ Mail**
-- Server: `smtp.qq.com`, Port: `465`
-- Need to enable SMTP and get authorization code in QQ Mail settings
+Never commit SMTP credentials to the repository.
 
-**Outlook**
-- Server: `smtp.office365.com`, Port: `587`
+## Manual test
 
-### 3. Test
-Go to **Actions** tab → **Singapore Rain Alert** → **Run workflow** to test manually.
+Open **Actions -> Singapore Rain Alert -> Run workflow**. A successful run without rain finishes silently; when rain is present, it sends one alert email subject to the cooldown.
 
-## Data Source
-[data.gov.sg](https://data.gov.sg/datasets/d_67a52f3825caddfd3590e74db4438b8c/view) - NEA 2-Hour Weather Forecast
+## Data sources
+
+- [NEA five-minute rainfall readings](https://data.gov.sg/collections/1459/view)
+- [NEA two-hour weather forecast](https://data.gov.sg/collections/1456/view)

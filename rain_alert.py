@@ -1,4 +1,5 @@
 import json
+import urllib.error
 import urllib.request
 import smtplib
 import os
@@ -18,6 +19,9 @@ RAINFALL_STATIONS = {
 }
 RAIN_KEYWORDS = ["rain", "showers", "thundery", "thunder", "drizzle", "storm"]
 COOLDOWN_MINUTES = 30
+API_RETRIES = 3
+API_RETRY_DELAY_SECONDS = 2
+SMTP_TIMEOUT_SECONDS = 20
 STATE_FILE = "rain_state.json"
 TO_EMAIL = "2702566686@qq.com"
 SGT = timezone(timedelta(hours=8))
@@ -25,8 +29,20 @@ SGT = timezone(timedelta(hours=8))
 
 def fetch_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "SG-Rain-Alert/2.0"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode())
+    last_error = None
+    for attempt in range(1, API_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt == API_RETRIES:
+                break
+            delay = API_RETRY_DELAY_SECONDS * attempt
+            print(f"  API request failed (attempt {attempt}/{API_RETRIES}); retrying in {delay}s: {exc}")
+            time.sleep(delay)
+
+    raise RuntimeError(f"Weather API unavailable after {API_RETRIES} attempts: {url}") from last_error
 
 
 def check_realtime_rainfall():
@@ -182,11 +198,11 @@ def send_email(rainfall_alerts, forecast_alerts, rainfall_ts, valid_period):
     msg.attach(MIMEText(html, "html", "utf-8"))
 
     if smtp_port == 465:
-        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=SMTP_TIMEOUT_SECONDS) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, TO_EMAIL, msg.as_string())
     else:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=SMTP_TIMEOUT_SECONDS) as server:
             server.starttls()
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, TO_EMAIL, msg.as_string())
