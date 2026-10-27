@@ -48,14 +48,15 @@ def fetch_json(url):
 def check_realtime_rainfall():
     data = fetch_json(RAINFALL_URL)
     readings = data["items"][0]["readings"]
-    station_map = {s["device_id"]: s for s in data["metadata"]["stations"]}
     timestamp = data["items"][0]["timestamp"]
 
     alerts = []
     all_checked = []
     for sid, info in RAINFALL_STATIONS.items():
         reading = next((r for r in readings if r["station_id"] == sid), None)
-        value = reading["value"] if reading else 0
+        if reading is None:
+            raise ValueError(f"Missing rainfall reading for required station {sid}")
+        value = reading["value"]
         entry = {"station_id": sid, "station_name": info["name"],
                  "location": info["location"], "rainfall_mm": value}
         all_checked.append(entry)
@@ -80,6 +81,11 @@ def check_forecast():
             all_checked.append(entry)
             if any(kw in weather.lower() for kw in RAIN_KEYWORDS):
                 alerts.append(entry)
+
+    found_areas = {entry["area"] for entry in all_checked}
+    missing_areas = set(FORECAST_AREAS) - found_areas
+    if missing_areas:
+        raise ValueError(f"Missing required forecast areas: {', '.join(sorted(missing_areas))}")
 
     return alerts, all_checked, valid_period
 
@@ -214,17 +220,33 @@ def main():
     print("=" * 50)
 
     print("\n[1/2] Checking real-time rainfall (5-min stations)...")
-    rainfall_alerts, rainfall_all, rainfall_ts = check_realtime_rainfall()
-    for s in rainfall_all:
-        marker = f"\U0001f327️ {s['rainfall_mm']}mm" if s['rainfall_mm'] > 0 else "✅ 0mm"
-        print(f"  {s['location']} ({s['station_name']}): {marker}")
+    source_errors = []
+    try:
+        rainfall_alerts, rainfall_all, rainfall_ts = check_realtime_rainfall()
+        for s in rainfall_all:
+            marker = f"\U0001f327️ {s['rainfall_mm']}mm" if s['rainfall_mm'] > 0 else "✅ 0mm"
+            print(f"  {s['location']} ({s['station_name']}): {marker}")
+    except Exception as exc:
+        rainfall_alerts = []
+        rainfall_ts = "Unavailable"
+        source_errors.append(f"real-time rainfall: {exc}")
+        print(f"::warning title=Rainfall source unavailable::{exc}")
 
     print(f"\n[2/2] Checking 2-hour weather forecast...")
-    forecast_alerts, forecast_all, valid_period = check_forecast()
-    print(f"  Valid: {valid_period['start']} ~ {valid_period['end']}")
-    for f in forecast_all:
-        marker = "\U0001f327️ RAIN" if f in forecast_alerts else "✅ OK"
-        print(f"  {f['location']} ({f['area']}): {f['forecast']}  [{marker}]")
+    try:
+        forecast_alerts, forecast_all, valid_period = check_forecast()
+        print(f"  Valid: {valid_period['start']} ~ {valid_period['end']}")
+        for f in forecast_all:
+            marker = "\U0001f327️ RAIN" if f in forecast_alerts else "✅ OK"
+            print(f"  {f['location']} ({f['area']}): {f['forecast']}  [{marker}]")
+    except Exception as exc:
+        forecast_alerts = []
+        valid_period = {"start": "Unavailable", "end": "Unavailable"}
+        source_errors.append(f"2-hour forecast: {exc}")
+        print(f"::warning title=Forecast source unavailable::{exc}")
+
+    if len(source_errors) == 2:
+        raise RuntimeError("Both weather sources failed: " + " | ".join(source_errors))
 
     has_rain = bool(rainfall_alerts or forecast_alerts)
 

@@ -15,6 +15,8 @@ Cloud-based rain alerts for two Singapore locations. GitHub Actions checks every
 - Sends an email if either selected rainfall station reports more than `0 mm`, or either forecast area contains a rain-related condition.
 - Uses a 30-minute cooldown to avoid repeated emails during the same rain event.
 - Retries temporary weather API failures up to three times.
+- Continues with the remaining weather source if one NEA endpoint is temporarily unavailable, while surfacing a GitHub Actions warning; the run fails if both sources are unavailable.
+- Treats missing required station or forecast-area data as an upstream error instead of silently interpreting it as dry weather.
 - Runs entirely in GitHub Actions; the user's computer does not need to stay on.
 
 ## GitHub configuration
